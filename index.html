@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Code Prompt Generator (Groq)</title>
+  <title>Smart AI Assistant (Groq)</title>
   <style>
     *{
       margin:0;
@@ -13,19 +13,33 @@
 
     :root{
       --bg:#212121;
-      --panel:#2f2f2f;
-      --panel-2:#2a2a2a;
+      --sidebar:#171717;
+      --topbar:#212121;
       --text:#ececec;
-      --muted:#a9a9a9;
-      --border:#3d3d3d;
-      --accent:#ffffff;
+      --muted:#9fa3ad;
+      --border:#343434;
       --user:#343541;
       --assistant:#2b2b2b;
-      --code:#1e1e1e;
-      --code-border:#444;
-      --btn:#ffffff;
-      --btn-text:#111;
+      --code:#1b1b1b;
+      --code-border:#3e3e3e;
       --input:#2f2f2f;
+      --white:#ffffff;
+      --btn-dark:#2b2b2b;
+      --accent:#10a37f;
+    }
+
+    *::-webkit-scrollbar{
+      width:8px;
+      height:8px;
+    }
+
+    *::-webkit-scrollbar-thumb{
+      background:#4b4b4b;
+      border-radius:20px;
+    }
+
+    *::-webkit-scrollbar-track{
+      background:transparent;
     }
 
     html,body{
@@ -33,7 +47,7 @@
       height:100%;
       background:var(--bg);
       color:var(--text);
-      font-family: Inter, "Segoe UI", Arial, sans-serif;
+      font-family:Inter, "Segoe UI", Arial, sans-serif;
       overflow:hidden;
     }
 
@@ -50,21 +64,29 @@
       background:var(--bg);
     }
 
+    /* SIDEBAR */
     .sidebar{
-      width:260px;
-      background:#171717;
+      width:270px;
+      background:var(--sidebar);
       border-right:1px solid #262626;
       display:flex;
       flex-direction:column;
       padding:14px;
       gap:14px;
+      flex-shrink:0;
     }
 
     .brand{
-      font-size:18px;
+      font-size:19px;
       font-weight:700;
       color:#fff;
-      padding:8px 4px 14px;
+      padding:8px 4px 6px;
+    }
+
+    .brand-sub{
+      font-size:12px;
+      color:#8f8f8f;
+      padding:0 4px 8px;
     }
 
     .new-chat-btn{
@@ -85,15 +107,54 @@
       background:#333;
     }
 
-    .sidebar-note{
-      margin-top:auto;
+    .history-title{
       font-size:12px;
-      line-height:1.5;
+      font-weight:700;
+      color:#9a9a9a;
+      text-transform:uppercase;
+      letter-spacing:0.8px;
+      padding:6px 4px 2px;
+    }
+
+    .history-list{
+      display:flex;
+      flex-direction:column;
+      gap:8px;
+      overflow-y:auto;
+      min-height:0;
+      flex:1;
+      padding-right:4px;
+    }
+
+    .history-item{
+      border:1px solid #313131;
+      background:#202020;
+      color:#ddd;
+      padding:10px 12px;
+      border-radius:10px;
+      font-size:13px;
+      line-height:1.4;
+      cursor:pointer;
+      transition:0.2s ease;
+      text-align:left;
+      width:100%;
+    }
+
+    .history-item:hover{
+      background:#292929;
+      border-color:#414141;
+    }
+
+    .sidebar-note{
+      font-size:12px;
+      line-height:1.6;
       color:#8f8f8f;
       border-top:1px solid #2a2a2a;
       padding-top:14px;
+      margin-top:10px;
     }
 
+    /* MAIN */
     .main{
       flex:1;
       display:flex;
@@ -103,23 +164,61 @@
     }
 
     .topbar{
-      height:60px;
-      border-bottom:1px solid #2e2e2e;
+      height:62px;
+      border-bottom:1px solid #2d2d2d;
       display:flex;
       align-items:center;
       justify-content:space-between;
       padding:0 18px;
       flex-shrink:0;
-      background:#212121;
+      background:var(--topbar);
+      gap:10px;
+    }
+
+    .top-left{
+      display:flex;
+      align-items:center;
+      gap:10px;
+      min-width:0;
+    }
+
+    .mobile-menu{
+      display:none;
+      width:40px;
+      height:40px;
+      border:none;
+      border-radius:10px;
+      background:#2f2f2f;
+      border:1px solid #3a3a3a;
+      color:#fff;
+      cursor:pointer;
+      align-items:center;
+      justify-content:center;
+      flex-shrink:0;
+    }
+
+    .mobile-menu svg{
+      width:18px;
+      height:18px;
     }
 
     .top-title{
       font-size:16px;
       font-weight:600;
       color:#fff;
+      white-space:nowrap;
+      overflow:hidden;
+      text-overflow:ellipsis;
     }
 
-    .api-btn{
+    .top-actions{
+      display:flex;
+      align-items:center;
+      gap:10px;
+      flex-shrink:0;
+    }
+
+    .api-btn, .clear-btn{
       border:none;
       background:#2f2f2f;
       color:#fff;
@@ -128,12 +227,14 @@
       border-radius:10px;
       cursor:pointer;
       font-size:13px;
+      transition:0.2s ease;
     }
 
-    .api-btn:hover{
+    .api-btn:hover, .clear-btn:hover{
       background:#393939;
     }
 
+    /* CHAT */
     .chat-wrap{
       flex:1;
       min-height:0;
@@ -143,7 +244,7 @@
     }
 
     .chat-inner{
-      width:min(900px, calc(100% - 32px));
+      width:min(920px, calc(100% - 28px));
       margin:0 auto;
       display:flex;
       flex-direction:column;
@@ -151,20 +252,25 @@
     }
 
     .welcome{
-      margin-top:40px;
+      margin-top:48px;
       text-align:center;
       color:#fff;
+      padding:0 8px;
     }
 
     .welcome h1{
-      font-size:34px;
+      font-size:36px;
       font-weight:700;
       margin-bottom:10px;
+      line-height:1.2;
     }
 
     .welcome p{
       font-size:15px;
       color:#b7b7b7;
+      line-height:1.6;
+      max-width:720px;
+      margin:0 auto;
     }
 
     .message{
@@ -190,15 +296,51 @@
       font-weight:600;
       display:flex;
       align-items:center;
+      justify-content:space-between;
       gap:8px;
+    }
+
+    .message-head-left{
+      display:flex;
+      align-items:center;
+      gap:8px;
+    }
+
+    .message-tag{
+      display:inline-flex;
+      align-items:center;
+      justify-content:center;
+      min-width:24px;
+      height:24px;
+      padding:0 8px;
+      border-radius:999px;
+      font-size:11px;
+      font-weight:700;
+      border:1px solid rgba(255,255,255,0.08);
+      background:rgba(255,255,255,0.04);
+      color:#dcdcdc;
     }
 
     .message-body{
       padding:16px;
       font-size:14px;
-      line-height:1.7;
+      line-height:1.75;
       white-space:pre-wrap;
       word-break:break-word;
+    }
+
+    .message-body p{
+      margin-bottom:12px;
+    }
+
+    .assistant-text{
+      white-space:pre-wrap;
+      word-break:break-word;
+      line-height:1.8;
+    }
+
+    .assistant-text strong{
+      color:#fff;
     }
 
     .code-block{
@@ -206,7 +348,7 @@
       border:1px solid var(--code-border);
       border-radius:14px;
       overflow:hidden;
-      margin-top:10px;
+      margin-top:12px;
     }
 
     .code-head{
@@ -218,9 +360,18 @@
       font-size:12px;
       color:#bdbdbd;
       background:#252525;
+      gap:8px;
+      flex-wrap:wrap;
     }
 
-    .copy-btn{
+    .code-actions{
+      display:flex;
+      align-items:center;
+      gap:8px;
+      flex-wrap:wrap;
+    }
+
+    .copy-btn, .download-btn{
       border:none;
       background:#343434;
       color:#fff;
@@ -228,9 +379,10 @@
       border-radius:8px;
       font-size:12px;
       cursor:pointer;
+      transition:0.2s ease;
     }
 
-    .copy-btn:hover{
+    .copy-btn:hover, .download-btn:hover{
       background:#404040;
     }
 
@@ -239,9 +391,10 @@
       padding:16px;
       overflow:auto;
       font-size:13px;
-      line-height:1.6;
+      line-height:1.65;
       color:#f5f5f5;
-      font-family: Consolas, "Courier New", monospace;
+      font-family:Consolas, "Courier New", monospace;
+      white-space:pre;
     }
 
     .typing{
@@ -263,6 +416,7 @@
     .typing span:nth-child(2){ animation-delay:0.15s; }
     .typing span:nth-child(3){ animation-delay:0.3s; }
 
+    /* INPUT */
     .input-area{
       flex-shrink:0;
       padding:16px;
@@ -271,18 +425,24 @@
     }
 
     .input-inner{
-      width:min(900px, calc(100% - 0px));
+      width:min(920px, 100%);
       margin:0 auto;
     }
 
     .input-box{
       background:var(--input);
       border:1px solid #3a3a3a;
-      border-radius:22px;
+      border-radius:24px;
       padding:12px 12px 12px 16px;
       display:flex;
       align-items:flex-end;
       gap:10px;
+      transition:0.2s ease;
+    }
+
+    .input-box:focus-within{
+      border-color:#4b4b4b;
+      box-shadow:0 0 0 1px rgba(255,255,255,0.04);
     }
 
     .prompt{
@@ -340,8 +500,10 @@
       text-align:center;
       margin-top:10px;
       line-height:1.5;
+      padding:0 8px;
     }
 
+    /* MODAL */
     .modal{
       position:fixed;
       inset:0;
@@ -393,6 +555,7 @@
       display:flex;
       gap:10px;
       justify-content:flex-end;
+      flex-wrap:wrap;
     }
 
     .btn{
@@ -413,18 +576,47 @@
       color:#111;
     }
 
-    @keyframes fadeIn{
-      from{ opacity:0; transform:translateY(8px); }
-      to{ opacity:1; transform:translateY(0); }
+    /* MOBILE SIDEBAR */
+    .mobile-overlay{
+      position:fixed;
+      inset:0;
+      background:rgba(0,0,0,0.5);
+      z-index:998;
+      display:none;
     }
 
-    @keyframes bounce{
-      0%,80%,100%{ transform:scale(0.7); opacity:0.6; }
-      40%{ transform:scale(1); opacity:1; }
+    .mobile-overlay.show{
+      display:block;
     }
 
     @media (max-width: 900px){
       .sidebar{
+        position:fixed;
+        left:-290px;
+        top:0;
+        height:100vh;
+        z-index:999;
+        transition:0.25s ease;
+        width:270px;
+      }
+
+      .sidebar.show{
+        left:0;
+      }
+
+      .mobile-menu{
+        display:flex;
+      }
+
+      .top-title{
+        font-size:15px;
+      }
+
+      .top-actions{
+        gap:8px;
+      }
+
+      .clear-btn{
         display:none;
       }
 
@@ -434,33 +626,107 @@
 
       .chat-inner,
       .input-inner{
-        width:calc(100% - 12px);
+        width:calc(100% - 10px);
       }
+    }
+
+    @media (max-width: 520px){
+      .topbar{
+        padding:0 10px;
+      }
+
+      .api-btn{
+        padding:9px 10px;
+        font-size:12px;
+      }
+
+      .input-area{
+        padding:10px;
+      }
+
+      .message-head{
+        padding:10px 12px;
+      }
+
+      .message-body{
+        padding:12px;
+      }
+
+      pre{
+        padding:12px;
+        font-size:12px;
+      }
+
+      .welcome{
+        margin-top:28px;
+      }
+
+      .welcome h1{
+        font-size:24px;
+      }
+
+      .welcome p{
+        font-size:14px;
+      }
+    }
+
+    @keyframes fadeIn{
+      from{ opacity:0; transform:translateY(8px); }
+      to{ opacity:1; transform:translateY(0); }
+    }
+
+    @keyframes bounce{
+      0%,80%,100%{ transform:scale(0.7); opacity:0.6; }
+      40%{ transform:scale(1); opacity:1; }
     }
   </style>
 </head>
 <body>
+  <div class="mobile-overlay" id="mobileOverlay"></div>
+
   <div class="app">
-    <aside class="sidebar">
-      <div class="brand">Code Prompt AI</div>
+    <aside class="sidebar" id="sidebar">
+      <div class="brand">Smart AI Assistant</div>
+      <div class="brand-sub">Human-like Groq chat with memory</div>
+
       <button class="new-chat-btn" id="newChatBtn">+ New Chat</button>
+
+      <div class="history-title">Recent Messages</div>
+      <div class="history-list" id="historyList"></div>
+
       <div class="sidebar-note">
-        Frontend-only code generator using Groq API.<br />
-        Best for HTML, CSS, JS, Python, Java, C, C++, Arduino, React, Node and more.
+        Remembers previous messages in current chat.<br />
+        Better follow-up understanding.<br />
+        Can explain + generate code + refine code.
       </div>
     </aside>
 
     <main class="main">
       <div class="topbar">
-        <div class="top-title">Code Generator (Groq)</div>
-        <button class="api-btn" id="openApiModal">Set Groq API Key</button>
+        <div class="top-left">
+          <button class="mobile-menu" id="mobileMenuBtn" title="Menu">
+            <svg viewBox="0 0 24 24" fill="none">
+              <path d="M4 7h16M4 12h16M4 17h16" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+            </svg>
+          </button>
+          <div class="top-title">Smart AI Assistant (Groq)</div>
+        </div>
+
+        <div class="top-actions">
+          <button class="clear-btn" id="clearMemoryBtn">Clear Memory</button>
+          <button class="api-btn" id="openApiModal">Set Groq API Key</button>
+        </div>
       </div>
 
       <div class="chat-wrap" id="chatWrap">
         <div class="chat-inner" id="chatInner">
           <div class="welcome" id="welcomeBlock">
-            <h1>What can I help you code?</h1>
-            <p>Type any prompt like “Build a responsive login page” or “Write Python bubble sort”.</p>
+            <h1>What can I help you with today?</h1>
+            <p>
+              I can chat more naturally, remember your previous messages in this conversation,
+              explain things like a human, and generate/refine code across follow-ups.
+              Try: “Build a login page”, then “make it dark theme”, then “convert to React”.
+            </p>
           </div>
         </div>
       </div>
@@ -472,7 +738,7 @@
               id="promptInput"
               class="prompt"
               rows="1"
-              placeholder="Ask for any code... (HTML, Python, Java, C++, React, Arduino, etc.)"
+              placeholder="Ask anything... code, explanations, improvements, follow-ups, debugging, design ideas..."
             ></textarea>
             <button class="send-btn" id="sendBtn" title="Send">
               <svg viewBox="0 0 24 24" fill="none">
@@ -482,19 +748,20 @@
             </button>
           </div>
           <div class="footer-note">
-            Uses your Groq API key in browser (frontend only). Best for testing/demo.
+            Frontend-only demo using Groq API. Current chat memory is preserved in browser for follow-up replies.
           </div>
         </div>
       </div>
     </main>
   </div>
 
+  <!-- API MODAL -->
   <div class="modal" id="apiModal">
     <div class="modal-card">
       <h3>Set Groq API Key</h3>
       <p>
         This frontend-only version stores your Groq API key in localStorage on your device.
-        For demo/testing only.
+        Good for demo/testing. Not recommended for public production.
       </p>
       <input
         type="password"
@@ -511,12 +778,16 @@
 
   <script>
     const GROQ_URL = "https://api.groq.com/openai/v1/chat/completions";
+    const STORAGE_KEY = "smart_ai_chat_memory_v1";
+    const API_KEY_STORAGE = "groq_api_key";
 
     const chatWrap = document.getElementById("chatWrap");
     const chatInner = document.getElementById("chatInner");
     const promptInput = document.getElementById("promptInput");
     const sendBtn = document.getElementById("sendBtn");
     const newChatBtn = document.getElementById("newChatBtn");
+    const clearMemoryBtn = document.getElementById("clearMemoryBtn");
+    const historyList = document.getElementById("historyList");
 
     const apiModal = document.getElementById("apiModal");
     const openApiModal = document.getElementById("openApiModal");
@@ -524,7 +795,12 @@
     const saveApiBtn = document.getElementById("saveApiBtn");
     const apiKeyInput = document.getElementById("apiKeyInput");
 
+    const sidebar = document.getElementById("sidebar");
+    const mobileMenuBtn = document.getElementById("mobileMenuBtn");
+    const mobileOverlay = document.getElementById("mobileOverlay");
+
     let isGenerating = false;
+    let conversationHistory = [];
 
     function autoResizeTextarea() {
       promptInput.style.height = "24px";
@@ -552,37 +828,62 @@
       if (lower.includes("#include") || lower.includes("void setup()")) return "cpp / arduino";
       if (lower.includes("function") || lower.includes("const ") || lower.includes("let ")) return "javascript";
       if (lower.includes("import react")) return "react";
+      if (lower.includes("select ") || lower.includes("create table")) return "sql";
       return "code";
     }
 
-    function extractCodeBlock(text) {
-      const match = text.match(/```([a-zA-Z0-9+#-]*)\n([\s\S]*?)```/);
-      if (match) {
-        return {
-          language: match[1] || detectLanguage(match[2]),
-          code: match[2].trim()
-        };
-      }
-      return {
-        language: detectLanguage(text),
-        code: text.trim()
-      };
+    function getSuggestedFileName(code, language) {
+      const lang = (language || "").toLowerCase();
+      if (lang.includes("html")) return "index.html";
+      if (lang.includes("python")) return "main.py";
+      if (lang.includes("java")) return "Main.java";
+      if (lang.includes("javascript")) return "script.js";
+      if (lang.includes("react")) return "App.jsx";
+      if (lang.includes("sql")) return "query.sql";
+      if (lang.includes("cpp") || lang.includes("arduino")) return "main.cpp";
+      return "code.txt";
     }
 
-    function createMessage(role, content, isCode = false) {
-      const wrapper = document.createElement("div");
-      wrapper.className = `message ${role}`;
+    function extractCodeBlocks(text) {
+      const regex = /```([a-zA-Z0-9+#.-]*)\n([\s\S]*?)```/g;
+      const blocks = [];
+      let match;
 
-      const head = document.createElement("div");
-      head.className = "message-head";
-      head.textContent = role === "user" ? "You" : "AI Code Assistant";
+      while ((match = regex.exec(text)) !== null) {
+        blocks.push({
+          language: match[1] || detectLanguage(match[2]),
+          code: match[2].trim()
+        });
+      }
 
-      const body = document.createElement("div");
-      body.className = "message-body";
+      return blocks;
+    }
 
-      if (isCode) {
-        const extracted = extractCodeBlock(content);
+    function renderAssistantContent(container, content) {
+      const codeBlocks = extractCodeBlocks(content);
 
+      if (!codeBlocks.length) {
+        const textDiv = document.createElement("div");
+        textDiv.className = "assistant-text";
+        textDiv.textContent = content;
+        container.appendChild(textDiv);
+        return;
+      }
+
+      let remainingText = content;
+      const firstCodeMatch = remainingText.indexOf("```");
+
+      if (firstCodeMatch > 0) {
+        const intro = remainingText.slice(0, firstCodeMatch).trim();
+        if (intro) {
+          const introDiv = document.createElement("div");
+          introDiv.className = "assistant-text";
+          introDiv.textContent = intro;
+          container.appendChild(introDiv);
+        }
+      }
+
+      codeBlocks.forEach((block) => {
         const codeBlock = document.createElement("div");
         codeBlock.className = "code-block";
 
@@ -590,14 +891,17 @@
         codeHead.className = "code-head";
 
         const lang = document.createElement("span");
-        lang.textContent = extracted.language;
+        lang.textContent = block.language || "code";
+
+        const codeActions = document.createElement("div");
+        codeActions.className = "code-actions";
 
         const copyBtn = document.createElement("button");
         copyBtn.className = "copy-btn";
         copyBtn.textContent = "Copy";
         copyBtn.onclick = async () => {
           try {
-            await navigator.clipboard.writeText(extracted.code);
+            await navigator.clipboard.writeText(block.code);
             copyBtn.textContent = "Copied!";
             setTimeout(() => copyBtn.textContent = "Copy", 1200);
           } catch {
@@ -606,15 +910,73 @@
           }
         };
 
+        const downloadBtn = document.createElement("button");
+        downloadBtn.className = "download-btn";
+        downloadBtn.textContent = "Download";
+        downloadBtn.onclick = () => {
+          const fileName = getSuggestedFileName(block.code, block.language);
+          const blob = new Blob([block.code], { type: "text/plain;charset=utf-8" });
+          const url = URL.createObjectURL(blob);
+          const a = document.createElement("a");
+          a.href = url;
+          a.download = fileName;
+          document.body.appendChild(a);
+          a.click();
+          a.remove();
+          URL.revokeObjectURL(url);
+        };
+
+        codeActions.appendChild(copyBtn);
+        codeActions.appendChild(downloadBtn);
+
         codeHead.appendChild(lang);
-        codeHead.appendChild(copyBtn);
+        codeHead.appendChild(codeActions);
 
         const pre = document.createElement("pre");
-        pre.innerHTML = escapeHtml(extracted.code);
+        pre.innerHTML = escapeHtml(block.code);
 
         codeBlock.appendChild(codeHead);
         codeBlock.appendChild(pre);
-        body.appendChild(codeBlock);
+        container.appendChild(codeBlock);
+      });
+
+      const lastFence = content.lastIndexOf("```");
+      const afterLastFence = content.slice(lastFence + 3).trim();
+      if (afterLastFence && !afterLastFence.startsWith(codeBlocks[codeBlocks.length - 1].language)) {
+        const outroDiv = document.createElement("div");
+        outroDiv.className = "assistant-text";
+        outroDiv.style.marginTop = "12px";
+        outroDiv.textContent = afterLastFence;
+        container.appendChild(outroDiv);
+      }
+    }
+
+    function createMessage(role, content) {
+      const wrapper = document.createElement("div");
+      wrapper.className = `message ${role}`;
+
+      const head = document.createElement("div");
+      head.className = "message-head";
+
+      const headLeft = document.createElement("div");
+      headLeft.className = "message-head-left";
+
+      const label = document.createElement("span");
+      label.textContent = role === "user" ? "You" : "Smart AI Assistant";
+
+      const tag = document.createElement("span");
+      tag.className = "message-tag";
+      tag.textContent = role === "user" ? "USER" : "AI";
+
+      headLeft.appendChild(label);
+      headLeft.appendChild(tag);
+      head.appendChild(headLeft);
+
+      const body = document.createElement("div");
+      body.className = "message-body";
+
+      if (role === "assistant") {
+        renderAssistantContent(body, content);
       } else {
         body.textContent = content;
       }
@@ -633,7 +995,20 @@
 
       const head = document.createElement("div");
       head.className = "message-head";
-      head.textContent = "AI Code Assistant";
+
+      const headLeft = document.createElement("div");
+      headLeft.className = "message-head-left";
+
+      const label = document.createElement("span");
+      label.textContent = "Smart AI Assistant";
+
+      const tag = document.createElement("span");
+      tag.className = "message-tag";
+      tag.textContent = "AI";
+
+      headLeft.appendChild(label);
+      headLeft.appendChild(tag);
+      head.appendChild(headLeft);
 
       const body = document.createElement("div");
       body.className = "message-body";
@@ -652,7 +1027,7 @@
     }
 
     function getApiKey() {
-      return localStorage.getItem("groq_api_key") || "";
+      return localStorage.getItem(API_KEY_STORAGE) || "";
     }
 
     function openModal() {
@@ -665,7 +1040,96 @@
       apiModal.classList.remove("show");
     }
 
-    async function generateCode(prompt) {
+    function saveConversation() {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(conversationHistory));
+      renderHistorySidebar();
+    }
+
+    function loadConversation() {
+      try {
+        const stored = localStorage.getItem(STORAGE_KEY);
+        if (!stored) return [];
+        const parsed = JSON.parse(stored);
+        if (!Array.isArray(parsed)) return [];
+        return parsed;
+      } catch {
+        return [];
+      }
+    }
+
+    function renderHistorySidebar() {
+      historyList.innerHTML = "";
+
+      const userMessages = conversationHistory
+        .filter(msg => msg.role === "user")
+        .slice(-10)
+        .reverse();
+
+      if (!userMessages.length) {
+        const empty = document.createElement("div");
+        empty.style.color = "#777";
+        empty.style.fontSize = "12px";
+        empty.style.padding = "6px 4px";
+        empty.textContent = "No messages yet";
+        historyList.appendChild(empty);
+        return;
+      }
+
+      userMessages.forEach((msg, index) => {
+        const btn = document.createElement("button");
+        btn.className = "history-item";
+        const shortText = msg.content.length > 80 ? msg.content.slice(0, 80) + "..." : msg.content;
+        btn.textContent = shortText;
+        btn.onclick = () => {
+          promptInput.value = msg.content;
+          autoResizeTextarea();
+          promptInput.focus();
+          closeSidebar();
+        };
+        historyList.appendChild(btn);
+      });
+    }
+
+    function renderConversation() {
+      const welcome = document.getElementById("welcomeBlock");
+      if (conversationHistory.length && welcome) {
+        welcome.remove();
+      }
+
+      if (!conversationHistory.length) {
+        chatInner.innerHTML = `
+          <div class="welcome" id="welcomeBlock">
+            <h1>What can I help you with today?</h1>
+            <p>
+              I can chat more naturally, remember your previous messages in this conversation,
+              explain things like a human, and generate/refine code across follow-ups.
+              Try: “Build a login page”, then “make it dark theme”, then “convert to React”.
+            </p>
+          </div>
+        `;
+        renderHistorySidebar();
+        return;
+      }
+
+      chatInner.innerHTML = "";
+      conversationHistory.forEach(msg => {
+        createMessage(msg.role, msg.content);
+      });
+      renderHistorySidebar();
+      scrollToBottom();
+    }
+
+    function closeSidebar() {
+      sidebar.classList.remove("show");
+      mobileOverlay.classList.remove("show");
+    }
+
+    function openSidebar() {
+      sidebar.classList.add("show");
+      mobileOverlay.classList.add("show");
+    }
+
+    async function generateReply() {
       const apiKey = getApiKey();
 
       if (!apiKey) {
@@ -674,18 +1138,37 @@
       }
 
       const systemInstruction = `
-You are an expert code generator.
-The user may ask for code in any programming language.
-Rules:
-- Return ONLY the final code.
-- No explanation.
-- No markdown explanation except code fences.
-- Prefer full working code.
-- If possible, return a single complete file.
-- If the user asks for HTML/CSS/JS, return one complete HTML file with internal CSS and JS unless they explicitly ask for separate files.
-- If the prompt asks for Python, Java, C, C++, Arduino, React, Node, SQL, etc., return correct code in that language.
-- Wrap the final code in triple backticks with language label.
+You are a highly intelligent, warm, human-like AI assistant for coding and general help.
+Behave more like ChatGPT-style conversation, not like a robotic code-only bot.
+
+Core behavior:
+- Be natural, conversational, helpful, and emotionally aware.
+- Understand follow-up prompts using previous messages.
+- Continue context from earlier conversation.
+- If the user says things like "make it better", "change color", "convert to React", "continue", "fix this", "improve it", you must use previous context intelligently.
+- Give code when needed, but do not force code for every message.
+- If the user asks a normal conversational message like "hi", respond naturally.
+- If the user asks for coding, give clear answer + code.
+- If helpful, briefly explain before or after code.
+- If user clearly wants only code, keep explanation minimal.
+- Ask a clarifying question only if absolutely necessary.
+- Use markdown code fences for code blocks.
+- For HTML/CSS/JS requests, if not specified otherwise, prefer a single complete HTML file with internal CSS and JS.
+- Keep answers practical, accurate, and polished.
+
+Very important:
+- Maintain continuity with prior chat history.
+- Be smart with edits and follow-up changes.
+- Avoid sounding robotic.
 `;
+
+      const messages = [
+        {
+          role: "system",
+          content: systemInstruction
+        },
+        ...conversationHistory
+      ];
 
       const response = await fetch(GROQ_URL, {
         method: "POST",
@@ -695,17 +1178,8 @@ Rules:
         },
         body: JSON.stringify({
           model: "llama-3.3-70b-versatile",
-          messages: [
-            {
-              role: "system",
-              content: systemInstruction
-            },
-            {
-              role: "user",
-              content: prompt
-            }
-          ],
-          temperature: 0.2
+          messages,
+          temperature: 0.5
         })
       });
 
@@ -734,7 +1208,12 @@ Rules:
       const welcome = document.getElementById("welcomeBlock");
       if (welcome) welcome.remove();
 
-      createMessage("user", prompt, false);
+      createMessage("user", prompt);
+      conversationHistory.push({
+        role: "user",
+        content: prompt
+      });
+      saveConversation();
 
       promptInput.value = "";
       autoResizeTextarea();
@@ -742,12 +1221,25 @@ Rules:
       const typingMessage = createTypingMessage();
 
       try {
-        const result = await generateCode(prompt);
+        const result = await generateReply();
         typingMessage.remove();
-        createMessage("assistant", result, true);
+
+        createMessage("assistant", result);
+
+        conversationHistory.push({
+          role: "assistant",
+          content: result
+        });
+        saveConversation();
       } catch (error) {
         typingMessage.remove();
-        createMessage("assistant", "Error: " + error.message, false);
+        createMessage("assistant", "I hit an error while responding:\n\n" + error.message);
+
+        conversationHistory.push({
+          role: "assistant",
+          content: "I hit an error while responding:\n\n" + error.message
+        });
+        saveConversation();
       } finally {
         isGenerating = false;
         sendBtn.disabled = false;
@@ -756,15 +1248,21 @@ Rules:
     }
 
     function resetChat() {
-      chatInner.innerHTML = `
-        <div class="welcome" id="welcomeBlock">
-          <h1>What can I help you code?</h1>
-          <p>Type any prompt like “Build a responsive login page” or “Write Python bubble sort”.</p>
-        </div>
-      `;
-      scrollToBottom();
+      conversationHistory = [];
+      localStorage.removeItem(STORAGE_KEY);
+      renderConversation();
+      promptInput.value = "";
+      autoResizeTextarea();
+      closeSidebar();
     }
 
+    function clearMemoryOnly() {
+      conversationHistory = [];
+      localStorage.removeItem(STORAGE_KEY);
+      renderConversation();
+    }
+
+    /* EVENTS */
     promptInput.addEventListener("input", autoResizeTextarea);
 
     promptInput.addEventListener("keydown", (e) => {
@@ -776,6 +1274,7 @@ Rules:
 
     sendBtn.addEventListener("click", handleSend);
     newChatBtn.addEventListener("click", resetChat);
+    clearMemoryBtn.addEventListener("click", clearMemoryOnly);
 
     openApiModal.addEventListener("click", openModal);
     closeModalBtn.addEventListener("click", closeModal);
@@ -786,7 +1285,7 @@ Rules:
         alert("Please enter Groq API key");
         return;
       }
-      localStorage.setItem("groq_api_key", key);
+      localStorage.setItem(API_KEY_STORAGE, key);
       closeModal();
     });
 
@@ -794,6 +1293,12 @@ Rules:
       if (e.target === apiModal) closeModal();
     });
 
+    mobileMenuBtn.addEventListener("click", openSidebar);
+    mobileOverlay.addEventListener("click", closeSidebar);
+
+    /* INIT */
+    conversationHistory = loadConversation();
+    renderConversation();
     autoResizeTextarea();
   </script>
 </body>
