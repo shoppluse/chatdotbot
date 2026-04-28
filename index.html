@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Code Prompt Generator</title>
+  <title>Code Prompt Generator (Groq)</title>
   <style>
     *{
       margin:0;
@@ -26,8 +26,6 @@
       --btn:#ffffff;
       --btn-text:#111;
       --input:#2f2f2f;
-      --danger:#ff4d4d;
-      --green:#10a37f;
     }
 
     html,body{
@@ -52,7 +50,6 @@
       background:var(--bg);
     }
 
-    /* SIDEBAR */
     .sidebar{
       width:260px;
       background:#171717;
@@ -97,7 +94,6 @@
       padding-top:14px;
     }
 
-    /* MAIN */
     .main{
       flex:1;
       display:flex;
@@ -138,7 +134,6 @@
       background:#393939;
     }
 
-    /* CHAT AREA */
     .chat-wrap{
       flex:1;
       min-height:0;
@@ -206,10 +201,6 @@
       word-break:break-word;
     }
 
-    .message-body p{
-      margin-bottom:10px;
-    }
-
     .code-block{
       background:var(--code);
       border:1px solid var(--code-border);
@@ -272,7 +263,6 @@
     .typing span:nth-child(2){ animation-delay:0.15s; }
     .typing span:nth-child(3){ animation-delay:0.3s; }
 
-    /* INPUT AREA */
     .input-area{
       flex-shrink:0;
       padding:16px;
@@ -352,7 +342,6 @@
       line-height:1.5;
     }
 
-    /* MODAL */
     .modal{
       position:fixed;
       inset:0;
@@ -424,10 +413,6 @@
       color:#111;
     }
 
-    .hidden{
-      display:none !important;
-    }
-
     @keyframes fadeIn{
       from{ opacity:0; transform:translateY(8px); }
       to{ opacity:1; transform:translateY(0); }
@@ -460,15 +445,15 @@
       <div class="brand">Code Prompt AI</div>
       <button class="new-chat-btn" id="newChatBtn">+ New Chat</button>
       <div class="sidebar-note">
-        Frontend-only code generator.<br />
+        Frontend-only code generator using Groq API.<br />
         Best for HTML, CSS, JS, Python, Java, C, C++, Arduino, React, Node and more.
       </div>
     </aside>
 
     <main class="main">
       <div class="topbar">
-        <div class="top-title">Code Generator</div>
-        <button class="api-btn" id="openApiModal">Set API Key</button>
+        <div class="top-title">Code Generator (Groq)</div>
+        <button class="api-btn" id="openApiModal">Set Groq API Key</button>
       </div>
 
       <div class="chat-wrap" id="chatWrap">
@@ -497,26 +482,25 @@
             </button>
           </div>
           <div class="footer-note">
-            Uses your own API key in browser (frontend only). For testing/demo use only.
+            Uses your Groq API key in browser (frontend only). Best for testing/demo.
           </div>
         </div>
       </div>
     </main>
   </div>
 
-  <!-- API KEY MODAL -->
   <div class="modal" id="apiModal">
     <div class="modal-card">
-      <h3>Set OpenAI API Key</h3>
+      <h3>Set Groq API Key</h3>
       <p>
-        This frontend-only version stores your API key in localStorage on your device.
+        This frontend-only version stores your Groq API key in localStorage on your device.
         For demo/testing only.
       </p>
       <input
         type="password"
         id="apiKeyInput"
         class="api-input"
-        placeholder="Paste your OpenAI API key here"
+        placeholder="Paste your Groq API key here (gsk_...)"
       />
       <div class="modal-actions">
         <button class="btn btn-secondary" id="closeModalBtn">Cancel</button>
@@ -526,11 +510,10 @@
   </div>
 
   <script>
-    const OPENAI_URL = "https://api.openai.com/v1/responses";
+    const GROQ_URL = "https://api.groq.com/openai/v1/chat/completions";
 
     const chatWrap = document.getElementById("chatWrap");
     const chatInner = document.getElementById("chatInner");
-    const welcomeBlock = document.getElementById("welcomeBlock");
     const promptInput = document.getElementById("promptInput");
     const sendBtn = document.getElementById("sendBtn");
     const newChatBtn = document.getElementById("newChatBtn");
@@ -563,13 +546,12 @@
 
     function detectLanguage(text) {
       const lower = text.toLowerCase();
-
       if (lower.includes("<!doctype html") || lower.includes("<html")) return "html";
       if (lower.includes("def ") || lower.includes("print(")) return "python";
       if (lower.includes("public class") || lower.includes("system.out.println")) return "java";
       if (lower.includes("#include") || lower.includes("void setup()")) return "cpp / arduino";
       if (lower.includes("function") || lower.includes("const ") || lower.includes("let ")) return "javascript";
-      if (lower.includes("import react") || lower.includes("jsx")) return "react";
+      if (lower.includes("import react")) return "react";
       return "code";
     }
 
@@ -581,7 +563,6 @@
           code: match[2].trim()
         };
       }
-
       return {
         language: detectLanguage(text),
         code: text.trim()
@@ -670,14 +651,8 @@
       return wrapper;
     }
 
-    function removeWelcome() {
-      if (welcomeBlock) {
-        welcomeBlock.remove();
-      }
-    }
-
     function getApiKey() {
-      return localStorage.getItem("openai_api_key") || "";
+      return localStorage.getItem("groq_api_key") || "";
     }
 
     function openModal() {
@@ -695,7 +670,7 @@
 
       if (!apiKey) {
         openModal();
-        throw new Error("Please set your OpenAI API key first.");
+        throw new Error("Please set your Groq API key first.");
       }
 
       const systemInstruction = `
@@ -704,42 +679,33 @@ The user may ask for code in any programming language.
 Rules:
 - Return ONLY the final code.
 - No explanation.
-- No markdown explanation.
+- No markdown explanation except code fences.
 - Prefer full working code.
 - If possible, return a single complete file.
-- If the user asks for HTML/CSS/JS, you may return one complete HTML file with internal CSS and JS unless they explicitly ask for separate files.
+- If the user asks for HTML/CSS/JS, return one complete HTML file with internal CSS and JS unless they explicitly ask for separate files.
 - If the prompt asks for Python, Java, C, C++, Arduino, React, Node, SQL, etc., return correct code in that language.
 - Wrap the final code in triple backticks with language label.
 `;
 
-      const response = await fetch(OPENAI_URL, {
+      const response = await fetch(GROQ_URL, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
           "Authorization": `Bearer ${apiKey}`
         },
         body: JSON.stringify({
-          model: "gpt-5-mini",
-          input: [
+          model: "llama3-70b-8192",
+          messages: [
             {
               role: "system",
-              content: [
-                {
-                  type: "input_text",
-                  text: systemInstruction
-                }
-              ]
+              content: systemInstruction
             },
             {
               role: "user",
-              content: [
-                {
-                  type: "input_text",
-                  text: prompt
-                }
-              ]
+              content: prompt
             }
-          ]
+          ],
+          temperature: 0.2
         })
       });
 
@@ -749,16 +715,7 @@ Rules:
       }
 
       const data = await response.json();
-
-      const outputText =
-        data.output_text ||
-        (data.output && Array.isArray(data.output)
-          ? data.output
-              .flatMap(item => item.content || [])
-              .filter(c => c.type === "output_text")
-              .map(c => c.text)
-              .join("\n")
-          : "");
+      const outputText = data?.choices?.[0]?.message?.content || "";
 
       if (!outputText.trim()) {
         throw new Error("No response text received.");
@@ -774,7 +731,9 @@ Rules:
       isGenerating = true;
       sendBtn.disabled = true;
 
-      removeWelcome();
+      const welcome = document.getElementById("welcomeBlock");
+      if (welcome) welcome.remove();
+
       createMessage("user", prompt, false);
 
       promptInput.value = "";
@@ -824,10 +783,10 @@ Rules:
     saveApiBtn.addEventListener("click", () => {
       const key = apiKeyInput.value.trim();
       if (!key) {
-        alert("Please enter API key");
+        alert("Please enter Groq API key");
         return;
       }
-      localStorage.setItem("openai_api_key", key);
+      localStorage.setItem("groq_api_key", key);
       closeModal();
     });
 
