@@ -2,16 +2,16 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Smart AI Assistant PRO</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Smart AI Assistant PRO MAX</title>
 
 <style>
 *{margin:0;padding:0;box-sizing:border-box}
 
 body{
-  font-family:Segoe UI,Arial;
   background:#212121;
   color:#fff;
+  font-family:Inter,Segoe UI;
   height:100vh;
   display:flex;
 }
@@ -21,22 +21,19 @@ body{
   width:260px;
   background:#171717;
   border-right:1px solid #2a2a2a;
+  padding:12px;
   display:flex;
   flex-direction:column;
-  padding:12px;
 }
 
-.brand{
-  font-size:18px;
-  font-weight:700;
-  margin-bottom:10px;
-}
+.brand{font-size:18px;font-weight:700;margin-bottom:10px}
 
 .new-chat{
-  background:#2b2b2b;
-  border:1px solid #444;
   padding:10px;
+  border:none;
+  background:#2b2b2b;
   border-radius:10px;
+  color:#fff;
   cursor:pointer;
   margin-bottom:10px;
 }
@@ -47,16 +44,17 @@ body{
 }
 
 .chat-item{
+  background:#222;
   padding:10px;
   border-radius:8px;
-  background:#222;
   margin-bottom:6px;
   cursor:pointer;
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
 }
 
-.chat-item:hover{
-  background:#333;
-}
+.chat-item:hover{background:#333}
 
 /* MAIN */
 .main{
@@ -67,11 +65,11 @@ body{
 
 .topbar{
   height:60px;
-  display:flex;
-  align-items:center;
-  justify-content:space-between;
-  padding:0 15px;
   border-bottom:1px solid #333;
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  padding:0 15px;
 }
 
 .chat{
@@ -84,11 +82,19 @@ body{
   margin-bottom:15px;
   padding:12px;
   border-radius:10px;
+  position:relative;
 }
 
 .user{background:#343541}
 .assistant{background:#2b2b2b}
 
+.time{
+  font-size:10px;
+  opacity:0.6;
+  margin-top:5px;
+}
+
+/* CODE */
 pre{
   background:#111;
   padding:10px;
@@ -97,6 +103,19 @@ pre{
   overflow:auto;
 }
 
+.copy-btn{
+  position:absolute;
+  right:10px;
+  top:10px;
+  font-size:12px;
+  background:#444;
+  border:none;
+  padding:4px 8px;
+  cursor:pointer;
+  border-radius:6px;
+}
+
+/* INPUT */
 .input-box{
   display:flex;
   padding:10px;
@@ -114,7 +133,7 @@ textarea{
 
 button{
   margin-left:10px;
-  padding:10px 15px;
+  padding:10px;
   border:none;
   background:#fff;
   color:#000;
@@ -127,14 +146,14 @@ button{
 <body>
 
 <div class="sidebar">
-  <div class="brand">Smart AI</div>
+  <div class="brand">AI PRO MAX</div>
   <button class="new-chat" onclick="newChat()">+ New Chat</button>
   <div class="chat-list" id="chatList"></div>
 </div>
 
 <div class="main">
   <div class="topbar">
-    <div>AI Assistant</div>
+    <div>Smart AI Assistant</div>
     <button onclick="setAPI()">Set API</button>
   </div>
 
@@ -147,11 +166,12 @@ button{
 </div>
 
 <script>
-const API_URL="https://api.groq.com/openai/v1/chat/completions";
-let chats=JSON.parse(localStorage.getItem("chats")||"[]");
+const API="https://api.groq.com/openai/v1/chat/completions";
+
+let chats=JSON.parse(localStorage.getItem("pro_chats")||"[]");
 let current=null;
 
-function save(){localStorage.setItem("chats",JSON.stringify(chats))}
+function save(){localStorage.setItem("pro_chats",JSON.stringify(chats))}
 
 function newChat(){
   const id=Date.now();
@@ -166,16 +186,36 @@ function renderChats(){
   const list=document.getElementById("chatList");
   list.innerHTML="";
   chats.forEach(c=>{
-    const d=document.createElement("div");
-    d.className="chat-item";
-    d.innerText=c.title;
-    d.onclick=()=>{current=c.id;renderMessages()};
-    list.appendChild(d);
+    const div=document.createElement("div");
+    div.className="chat-item";
+
+    const span=document.createElement("span");
+    span.textContent=c.title;
+
+    const del=document.createElement("button");
+    del.textContent="✕";
+    del.onclick=(e)=>{
+      e.stopPropagation();
+      chats=chats.filter(x=>x.id!==c.id);
+      save();
+      renderChats();
+      if(current===c.id)newChat();
+    };
+
+    div.onclick=()=>{current=c.id;renderMessages()};
+
+    div.appendChild(span);
+    div.appendChild(del);
+    list.appendChild(div);
   });
 }
 
 function getChat(){
   return chats.find(c=>c.id===current);
+}
+
+function time(){
+  return new Date().toLocaleTimeString();
 }
 
 function renderMessages(){
@@ -194,6 +234,11 @@ function renderMessages(){
       div.innerText=m.content;
     }
 
+    const t=document.createElement("div");
+    t.className="time";
+    t.textContent=m.time;
+    div.appendChild(t);
+
     box.appendChild(div);
   });
 
@@ -206,6 +251,13 @@ function renderCode(div,text){
     if(i%2){
       const pre=document.createElement("pre");
       pre.innerText=p.replace(/^[a-z]+\n/,"");
+
+      const copy=document.createElement("button");
+      copy.textContent="Copy";
+      copy.className="copy-btn";
+      copy.onclick=()=>navigator.clipboard.writeText(pre.innerText);
+
+      div.appendChild(copy);
       div.appendChild(pre);
     }else{
       div.append(p);
@@ -214,8 +266,8 @@ function renderCode(div,text){
 }
 
 function setAPI(){
-  const key=prompt("Enter Groq API Key:");
-  localStorage.setItem("api",key);
+  const key=prompt("Enter Groq API Key");
+  localStorage.setItem("groq_key",key);
 }
 
 async function send(){
@@ -225,28 +277,32 @@ async function send(){
 
   const chat=getChat();
 
-  chat.messages.push({role:"user",content:msg});
-  if(chat.title==="New Chat")chat.title=msg.slice(0,25);
+  chat.messages.push({role:"user",content:msg,time:time()});
+  if(chat.title==="New Chat")chat.title=msg.slice(0,30);
 
   input.value="";
   renderChats();
   renderMessages();
 
-  const loading={role:"assistant",content:"Thinking..."};
+  const loading={role:"assistant",content:"Typing...",time:time()};
   chat.messages.push(loading);
   renderMessages();
 
   try{
-    const res=await fetch(API_URL,{
+    const res=await fetch(API,{
       method:"POST",
       headers:{
         "Content-Type":"application/json",
-        "Authorization":"Bearer "+localStorage.getItem("api")
+        "Authorization":"Bearer "+localStorage.getItem("groq_key")
       },
       body:JSON.stringify({
         model:"llama-3.3-70b-versatile",
+        temperature:0.6,
         messages:[
-          {role:"system",content:"You are a smart human-like AI assistant. Be natural and helpful."},
+          {
+            role:"system",
+            content:"You are a smart, human-like AI. Be natural, friendly, and understand context."
+          },
           ...chat.messages.filter(m=>m!==loading)
         ]
       })
