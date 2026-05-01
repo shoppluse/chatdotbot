@@ -777,529 +777,218 @@
   </div>
 
   <script>
-    const GROQ_URL = "https://api.groq.com/openai/v1/chat/completions";
-    const STORAGE_KEY = "smart_ai_chat_memory_v1";
-    const API_KEY_STORAGE = "groq_api_key";
+const GROQ_URL = "https://api.groq.com/openai/v1/chat/completions";
+const API_KEY_STORAGE = "groq_api_key";
+const CHAT_STORAGE = "multi_chat_v1";
 
-    const chatWrap = document.getElementById("chatWrap");
-    const chatInner = document.getElementById("chatInner");
-    const promptInput = document.getElementById("promptInput");
-    const sendBtn = document.getElementById("sendBtn");
-    const newChatBtn = document.getElementById("newChatBtn");
-    const clearMemoryBtn = document.getElementById("clearMemoryBtn");
-    const historyList = document.getElementById("historyList");
+let chats = JSON.parse(localStorage.getItem(CHAT_STORAGE) || "[]");
+let currentChatId = null;
+let isGenerating = false;
 
-    const apiModal = document.getElementById("apiModal");
-    const openApiModal = document.getElementById("openApiModal");
-    const closeModalBtn = document.getElementById("closeModalBtn");
-    const saveApiBtn = document.getElementById("saveApiBtn");
-    const apiKeyInput = document.getElementById("apiKeyInput");
+const chatInner = document.getElementById("chatInner");
+const promptInput = document.getElementById("promptInput");
+const sendBtn = document.getElementById("sendBtn");
+const historyList = document.getElementById("historyList");
+const newChatBtn = document.getElementById("newChatBtn");
 
-    const sidebar = document.getElementById("sidebar");
-    const mobileMenuBtn = document.getElementById("mobileMenuBtn");
-    const mobileOverlay = document.getElementById("mobileOverlay");
+function saveChats() {
+  localStorage.setItem(CHAT_STORAGE, JSON.stringify(chats));
+}
 
-    let isGenerating = false;
-    let conversationHistory = [];
+function createNewChat() {
+  const id = Date.now();
+  const chat = {
+    id,
+    title: "New Chat",
+    messages: []
+  };
+  chats.unshift(chat);
+  currentChatId = id;
+  saveChats();
+  renderChats();
+  renderMessages();
+}
 
-    function autoResizeTextarea() {
-      promptInput.style.height = "24px";
-      promptInput.style.height = Math.min(promptInput.scrollHeight, 180) + "px";
+function getCurrentChat() {
+  return chats.find(c => c.id === currentChatId);
+}
+
+function renderChats() {
+  historyList.innerHTML = "";
+
+  chats.forEach(chat => {
+    const btn = document.createElement("button");
+    btn.className = "history-item";
+    btn.textContent = chat.title;
+
+    btn.onclick = () => {
+      currentChatId = chat.id;
+      renderMessages();
+    };
+
+    historyList.appendChild(btn);
+  });
+}
+
+function renderMessages() {
+  const chat = getCurrentChat();
+  chatInner.innerHTML = "";
+
+  if (!chat || !chat.messages.length) {
+    chatInner.innerHTML = `
+      <div class="welcome">
+        <h1>What can I help you with today?</h1>
+        <p>Try: build login page → make dark → convert to React</p>
+      </div>
+    `;
+    return;
+  }
+
+  chat.messages.forEach(msg => {
+    addMessageUI(msg.role, msg.content);
+  });
+}
+
+function addMessageUI(role, content) {
+  const div = document.createElement("div");
+  div.className = `message ${role}`;
+
+  const body = document.createElement("div");
+  body.className = "message-body";
+
+  if (role === "assistant") {
+    renderAssistant(body, content);
+  } else {
+    body.textContent = content;
+  }
+
+  div.appendChild(body);
+  chatInner.appendChild(div);
+  chatInner.scrollTop = chatInner.scrollHeight;
+}
+
+function renderAssistant(container, text) {
+  const parts = text.split("```");
+
+  parts.forEach((part, i) => {
+    if (i % 2 === 1) {
+      const pre = document.createElement("pre");
+      pre.textContent = part.replace(/^[a-z]+\n/, "");
+      container.appendChild(pre);
+    } else {
+      const p = document.createElement("div");
+      p.textContent = part;
+      container.appendChild(p);
     }
+  });
+}
 
-    function scrollToBottom() {
-      requestAnimationFrame(() => {
-        chatWrap.scrollTop = chatWrap.scrollHeight;
-      });
-    }
+function setChatTitle(chat, firstMessage) {
+  if (chat.title === "New Chat") {
+    chat.title = firstMessage.slice(0, 30);
+  }
+}
 
-    function escapeHtml(str) {
-      return str
-        .replace(/&/g, "&amp;")
-        .replace(/</g, "&lt;")
-        .replace(/>/g, "&gt;");
-    }
+async function generateReply(prompt) {
+  const apiKey = localStorage.getItem(API_KEY_STORAGE);
+  if (!apiKey) throw new Error("No API key");
 
-    function detectLanguage(text) {
-      const lower = text.toLowerCase();
-      if (lower.includes("<!doctype html") || lower.includes("<html")) return "html";
-      if (lower.includes("def ") || lower.includes("print(")) return "python";
-      if (lower.includes("public class") || lower.includes("system.out.println")) return "java";
-      if (lower.includes("#include") || lower.includes("void setup()")) return "cpp / arduino";
-      if (lower.includes("function") || lower.includes("const ") || lower.includes("let ")) return "javascript";
-      if (lower.includes("import react")) return "react";
-      if (lower.includes("select ") || lower.includes("create table")) return "sql";
-      return "code";
-    }
+  const chat = getCurrentChat();
 
-    function getSuggestedFileName(code, language) {
-      const lang = (language || "").toLowerCase();
-      if (lang.includes("html")) return "index.html";
-      if (lang.includes("python")) return "main.py";
-      if (lang.includes("java")) return "Main.java";
-      if (lang.includes("javascript")) return "script.js";
-      if (lang.includes("react")) return "App.jsx";
-      if (lang.includes("sql")) return "query.sql";
-      if (lang.includes("cpp") || lang.includes("arduino")) return "main.cpp";
-      return "code.txt";
-    }
-
-    function extractCodeBlocks(text) {
-      const regex = /```([a-zA-Z0-9+#.-]*)\n([\s\S]*?)```/g;
-      const blocks = [];
-      let match;
-
-      while ((match = regex.exec(text)) !== null) {
-        blocks.push({
-          language: match[1] || detectLanguage(match[2]),
-          code: match[2].trim()
-        });
-      }
-
-      return blocks;
-    }
-
-    function renderAssistantContent(container, content) {
-      const codeBlocks = extractCodeBlocks(content);
-
-      if (!codeBlocks.length) {
-        const textDiv = document.createElement("div");
-        textDiv.className = "assistant-text";
-        textDiv.textContent = content;
-        container.appendChild(textDiv);
-        return;
-      }
-
-      let remainingText = content;
-      const firstCodeMatch = remainingText.indexOf("```");
-
-      if (firstCodeMatch > 0) {
-        const intro = remainingText.slice(0, firstCodeMatch).trim();
-        if (intro) {
-          const introDiv = document.createElement("div");
-          introDiv.className = "assistant-text";
-          introDiv.textContent = intro;
-          container.appendChild(introDiv);
-        }
-      }
-
-      codeBlocks.forEach((block) => {
-        const codeBlock = document.createElement("div");
-        codeBlock.className = "code-block";
-
-        const codeHead = document.createElement("div");
-        codeHead.className = "code-head";
-
-        const lang = document.createElement("span");
-        lang.textContent = block.language || "code";
-
-        const codeActions = document.createElement("div");
-        codeActions.className = "code-actions";
-
-        const copyBtn = document.createElement("button");
-        copyBtn.className = "copy-btn";
-        copyBtn.textContent = "Copy";
-        copyBtn.onclick = async () => {
-          try {
-            await navigator.clipboard.writeText(block.code);
-            copyBtn.textContent = "Copied!";
-            setTimeout(() => copyBtn.textContent = "Copy", 1200);
-          } catch {
-            copyBtn.textContent = "Failed";
-            setTimeout(() => copyBtn.textContent = "Copy", 1200);
-          }
-        };
-
-        const downloadBtn = document.createElement("button");
-        downloadBtn.className = "download-btn";
-        downloadBtn.textContent = "Download";
-        downloadBtn.onclick = () => {
-          const fileName = getSuggestedFileName(block.code, block.language);
-          const blob = new Blob([block.code], { type: "text/plain;charset=utf-8" });
-          const url = URL.createObjectURL(blob);
-          const a = document.createElement("a");
-          a.href = url;
-          a.download = fileName;
-          document.body.appendChild(a);
-          a.click();
-          a.remove();
-          URL.revokeObjectURL(url);
-        };
-
-        codeActions.appendChild(copyBtn);
-        codeActions.appendChild(downloadBtn);
-
-        codeHead.appendChild(lang);
-        codeHead.appendChild(codeActions);
-
-        const pre = document.createElement("pre");
-        pre.innerHTML = escapeHtml(block.code);
-
-        codeBlock.appendChild(codeHead);
-        codeBlock.appendChild(pre);
-        container.appendChild(codeBlock);
-      });
-
-      const lastFence = content.lastIndexOf("```");
-      const afterLastFence = content.slice(lastFence + 3).trim();
-      if (afterLastFence && !afterLastFence.startsWith(codeBlocks[codeBlocks.length - 1].language)) {
-        const outroDiv = document.createElement("div");
-        outroDiv.className = "assistant-text";
-        outroDiv.style.marginTop = "12px";
-        outroDiv.textContent = afterLastFence;
-        container.appendChild(outroDiv);
-      }
-    }
-
-    function createMessage(role, content) {
-      const wrapper = document.createElement("div");
-      wrapper.className = `message ${role}`;
-
-      const head = document.createElement("div");
-      head.className = "message-head";
-
-      const headLeft = document.createElement("div");
-      headLeft.className = "message-head-left";
-
-      const label = document.createElement("span");
-      label.textContent = role === "user" ? "You" : "Smart AI Assistant";
-
-      const tag = document.createElement("span");
-      tag.className = "message-tag";
-      tag.textContent = role === "user" ? "USER" : "AI";
-
-      headLeft.appendChild(label);
-      headLeft.appendChild(tag);
-      head.appendChild(headLeft);
-
-      const body = document.createElement("div");
-      body.className = "message-body";
-
-      if (role === "assistant") {
-        renderAssistantContent(body, content);
-      } else {
-        body.textContent = content;
-      }
-
-      wrapper.appendChild(head);
-      wrapper.appendChild(body);
-      chatInner.appendChild(wrapper);
-
-      scrollToBottom();
-      return wrapper;
-    }
-
-    function createTypingMessage() {
-      const wrapper = document.createElement("div");
-      wrapper.className = "message assistant";
-
-      const head = document.createElement("div");
-      head.className = "message-head";
-
-      const headLeft = document.createElement("div");
-      headLeft.className = "message-head-left";
-
-      const label = document.createElement("span");
-      label.textContent = "Smart AI Assistant";
-
-      const tag = document.createElement("span");
-      tag.className = "message-tag";
-      tag.textContent = "AI";
-
-      headLeft.appendChild(label);
-      headLeft.appendChild(tag);
-      head.appendChild(headLeft);
-
-      const body = document.createElement("div");
-      body.className = "message-body";
-
-      const typing = document.createElement("div");
-      typing.className = "typing";
-      typing.innerHTML = "<span></span><span></span><span></span>";
-
-      body.appendChild(typing);
-      wrapper.appendChild(head);
-      wrapper.appendChild(body);
-      chatInner.appendChild(wrapper);
-
-      scrollToBottom();
-      return wrapper;
-    }
-
-    function getApiKey() {
-      return localStorage.getItem(API_KEY_STORAGE) || "";
-    }
-
-    function openModal() {
-      apiKeyInput.value = getApiKey();
-      apiModal.classList.add("show");
-      setTimeout(() => apiKeyInput.focus(), 50);
-    }
-
-    function closeModal() {
-      apiModal.classList.remove("show");
-    }
-
-    function saveConversation() {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(conversationHistory));
-      renderHistorySidebar();
-    }
-
-    function loadConversation() {
-      try {
-        const stored = localStorage.getItem(STORAGE_KEY);
-        if (!stored) return [];
-        const parsed = JSON.parse(stored);
-        if (!Array.isArray(parsed)) return [];
-        return parsed;
-      } catch {
-        return [];
-      }
-    }
-
-    function renderHistorySidebar() {
-      historyList.innerHTML = "";
-
-      const userMessages = conversationHistory
-        .filter(msg => msg.role === "user")
-        .slice(-10)
-        .reverse();
-
-      if (!userMessages.length) {
-        const empty = document.createElement("div");
-        empty.style.color = "#777";
-        empty.style.fontSize = "12px";
-        empty.style.padding = "6px 4px";
-        empty.textContent = "No messages yet";
-        historyList.appendChild(empty);
-        return;
-      }
-
-      userMessages.forEach((msg, index) => {
-        const btn = document.createElement("button");
-        btn.className = "history-item";
-        const shortText = msg.content.length > 80 ? msg.content.slice(0, 80) + "..." : msg.content;
-        btn.textContent = shortText;
-        btn.onclick = () => {
-          promptInput.value = msg.content;
-          autoResizeTextarea();
-          promptInput.focus();
-          closeSidebar();
-        };
-        historyList.appendChild(btn);
-      });
-    }
-
-    function renderConversation() {
-      const welcome = document.getElementById("welcomeBlock");
-      if (conversationHistory.length && welcome) {
-        welcome.remove();
-      }
-
-      if (!conversationHistory.length) {
-        chatInner.innerHTML = `
-          <div class="welcome" id="welcomeBlock">
-            <h1>What can I help you with today?</h1>
-            <p>
-              I can chat more naturally, remember your previous messages in this conversation,
-              explain things like a human, and generate/refine code across follow-ups.
-              Try: “Build a login page”, then “make it dark theme”, then “convert to React”.
-            </p>
-          </div>
-        `;
-        renderHistorySidebar();
-        return;
-      }
-
-      chatInner.innerHTML = "";
-      conversationHistory.forEach(msg => {
-        createMessage(msg.role, msg.content);
-      });
-      renderHistorySidebar();
-      scrollToBottom();
-    }
-
-    function closeSidebar() {
-      sidebar.classList.remove("show");
-      mobileOverlay.classList.remove("show");
-    }
-
-    function openSidebar() {
-      sidebar.classList.add("show");
-      mobileOverlay.classList.add("show");
-    }
-
-    async function generateReply() {
-      const apiKey = getApiKey();
-
-      if (!apiKey) {
-        openModal();
-        throw new Error("Please set your Groq API key first.");
-      }
-
-      const systemInstruction = `
-You are a highly intelligent, warm, human-like AI assistant for coding and general help.
-Behave more like ChatGPT-style conversation, not like a robotic code-only bot.
-
-Core behavior:
-- Be natural, conversational, helpful, and emotionally aware.
-- Understand follow-up prompts using previous messages.
-- Continue context from earlier conversation.
-- If the user says things like "make it better", "change color", "convert to React", "continue", "fix this", "improve it", you must use previous context intelligently.
-- Give code when needed, but do not force code for every message.
-- If the user asks a normal conversational message like "hi", respond naturally.
-- If the user asks for coding, give clear answer + code.
-- If helpful, briefly explain before or after code.
-- If user clearly wants only code, keep explanation minimal.
-- Ask a clarifying question only if absolutely necessary.
-- Use markdown code fences for code blocks.
-- For HTML/CSS/JS requests, if not specified otherwise, prefer a single complete HTML file with internal CSS and JS.
-- Keep answers practical, accurate, and polished.
-
-Very important:
-- Maintain continuity with prior chat history.
-- Be smart with edits and follow-up changes.
-- Avoid sounding robotic.
+  const systemPrompt = `
+You are a smart, human-like AI assistant.
+- Be natural and conversational
+- Understand context deeply
+- Handle follow-up edits
+- Give clean code when needed
+- Avoid robotic responses
 `;
 
-      const messages = [
-        {
-          role: "system",
-          content: systemInstruction
-        },
-        ...conversationHistory
-      ];
+  const messages = [
+    { role: "system", content: systemPrompt },
+    ...chat.messages,
+    { role: "user", content: prompt }
+  ];
 
-      const response = await fetch(GROQ_URL, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "Authorization": `Bearer ${apiKey}`
-        },
-        body: JSON.stringify({
-          model: "llama-3.3-70b-versatile",
-          messages,
-          temperature: 0.5
-        })
-      });
+  const res = await fetch(GROQ_URL, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: "Bearer " + apiKey
+    },
+    body: JSON.stringify({
+      model: "llama-3.3-70b-versatile",
+      messages,
+      temperature: 0.6
+    })
+  });
 
-      if (!response.ok) {
-        const errorText = await response.text();
-        throw new Error("API Error: " + errorText);
-      }
+  const data = await res.json();
+  return data.choices[0].message.content;
+}
 
-      const data = await response.json();
-      const outputText = data?.choices?.[0]?.message?.content || "";
+async function sendMessage() {
+  const prompt = promptInput.value.trim();
+  if (!prompt || isGenerating) return;
 
-      if (!outputText.trim()) {
-        throw new Error("No response text received.");
-      }
+  const chat = getCurrentChat();
+  isGenerating = true;
+  sendBtn.disabled = true;
 
-      return outputText;
-    }
+  addMessageUI("user", prompt);
+  chat.messages.push({ role: "user", content: prompt });
 
-    async function handleSend() {
-      const prompt = promptInput.value.trim();
-      if (!prompt || isGenerating) return;
+  setChatTitle(chat, prompt);
+  saveChats();
+  renderChats();
 
-      isGenerating = true;
-      sendBtn.disabled = true;
+  promptInput.value = "";
 
-      const welcome = document.getElementById("welcomeBlock");
-      if (welcome) welcome.remove();
+  const loading = addLoading();
 
-      createMessage("user", prompt);
-      conversationHistory.push({
-        role: "user",
-        content: prompt
-      });
-      saveConversation();
+  try {
+    const reply = await generateReply(prompt);
 
-      promptInput.value = "";
-      autoResizeTextarea();
+    loading.remove();
+    addMessageUI("assistant", reply);
 
-      const typingMessage = createTypingMessage();
+    chat.messages.push({ role: "assistant", content: reply });
+    saveChats();
 
-      try {
-        const result = await generateReply();
-        typingMessage.remove();
+  } catch (e) {
+    loading.remove();
+    addMessageUI("assistant", "Error: " + e.message);
+  }
 
-        createMessage("assistant", result);
+  isGenerating = false;
+  sendBtn.disabled = false;
+}
 
-        conversationHistory.push({
-          role: "assistant",
-          content: result
-        });
-        saveConversation();
-      } catch (error) {
-        typingMessage.remove();
-        createMessage("assistant", "I hit an error while responding:\n\n" + error.message);
+function addLoading() {
+  const div = document.createElement("div");
+  div.className = "message assistant";
+  div.textContent = "Thinking...";
+  chatInner.appendChild(div);
+  return div;
+}
 
-        conversationHistory.push({
-          role: "assistant",
-          content: "I hit an error while responding:\n\n" + error.message
-        });
-        saveConversation();
-      } finally {
-        isGenerating = false;
-        sendBtn.disabled = false;
-        promptInput.focus();
-      }
-    }
+sendBtn.onclick = sendMessage;
 
-    function resetChat() {
-      conversationHistory = [];
-      localStorage.removeItem(STORAGE_KEY);
-      renderConversation();
-      promptInput.value = "";
-      autoResizeTextarea();
-      closeSidebar();
-    }
+promptInput.addEventListener("keydown", (e) => {
+  if (e.key === "Enter" && !e.shiftKey) {
+    e.preventDefault();
+    sendMessage();
+  }
+});
 
-    function clearMemoryOnly() {
-      conversationHistory = [];
-      localStorage.removeItem(STORAGE_KEY);
-      renderConversation();
-    }
+newChatBtn.onclick = createNewChat;
 
-    /* EVENTS */
-    promptInput.addEventListener("input", autoResizeTextarea);
+/* INIT */
+if (!chats.length) createNewChat();
+else currentChatId = chats[0].id;
 
-    promptInput.addEventListener("keydown", (e) => {
-      if (e.key === "Enter" && !e.shiftKey) {
-        e.preventDefault();
-        handleSend();
-      }
-    });
-
-    sendBtn.addEventListener("click", handleSend);
-    newChatBtn.addEventListener("click", resetChat);
-    clearMemoryBtn.addEventListener("click", clearMemoryOnly);
-
-    openApiModal.addEventListener("click", openModal);
-    closeModalBtn.addEventListener("click", closeModal);
-
-    saveApiBtn.addEventListener("click", () => {
-      const key = apiKeyInput.value.trim();
-      if (!key) {
-        alert("Please enter Groq API key");
-        return;
-      }
-      localStorage.setItem(API_KEY_STORAGE, key);
-      closeModal();
-    });
-
-    apiModal.addEventListener("click", (e) => {
-      if (e.target === apiModal) closeModal();
-    });
-
-    mobileMenuBtn.addEventListener("click", openSidebar);
-    mobileOverlay.addEventListener("click", closeSidebar);
-
-    /* INIT */
-    conversationHistory = loadConversation();
-    renderConversation();
-    autoResizeTextarea();
-  </script>
+renderChats();
+renderMessages();
+</script>
 </body>
 </html>
