@@ -1,994 +1,274 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Smart AI Assistant (Groq)</title>
-  <style>
-    *{
-      margin:0;
-      padding:0;
-      box-sizing:border-box;
-    }
-
-    :root{
-      --bg:#212121;
-      --sidebar:#171717;
-      --topbar:#212121;
-      --text:#ececec;
-      --muted:#9fa3ad;
-      --border:#343434;
-      --user:#343541;
-      --assistant:#2b2b2b;
-      --code:#1b1b1b;
-      --code-border:#3e3e3e;
-      --input:#2f2f2f;
-      --white:#ffffff;
-      --btn-dark:#2b2b2b;
-      --accent:#10a37f;
-    }
-
-    *::-webkit-scrollbar{
-      width:8px;
-      height:8px;
-    }
-
-    *::-webkit-scrollbar-thumb{
-      background:#4b4b4b;
-      border-radius:20px;
-    }
-
-    *::-webkit-scrollbar-track{
-      background:transparent;
-    }
-
-    html,body{
-      width:100%;
-      height:100%;
-      background:var(--bg);
-      color:var(--text);
-      font-family:Inter, "Segoe UI", Arial, sans-serif;
-      overflow:hidden;
-    }
-
-    body{
-      display:flex;
-      justify-content:center;
-      align-items:center;
-    }
-
-    .app{
-      width:100%;
-      height:100vh;
-      display:flex;
-      background:var(--bg);
-    }
-
-    /* SIDEBAR */
-    .sidebar{
-      width:270px;
-      background:var(--sidebar);
-      border-right:1px solid #262626;
-      display:flex;
-      flex-direction:column;
-      padding:14px;
-      gap:14px;
-      flex-shrink:0;
-    }
-
-    .brand{
-      font-size:19px;
-      font-weight:700;
-      color:#fff;
-      padding:8px 4px 6px;
-    }
-
-    .brand-sub{
-      font-size:12px;
-      color:#8f8f8f;
-      padding:0 4px 8px;
-    }
-
-    .new-chat-btn{
-      width:100%;
-      border:none;
-      background:#2b2b2b;
-      color:#fff;
-      border:1px solid #3b3b3b;
-      padding:12px 14px;
-      border-radius:12px;
-      font-size:14px;
-      cursor:pointer;
-      text-align:left;
-      transition:0.2s ease;
-    }
-
-    .new-chat-btn:hover{
-      background:#333;
-    }
-
-    .history-title{
-      font-size:12px;
-      font-weight:700;
-      color:#9a9a9a;
-      text-transform:uppercase;
-      letter-spacing:0.8px;
-      padding:6px 4px 2px;
-    }
-
-    .history-list{
-      display:flex;
-      flex-direction:column;
-      gap:8px;
-      overflow-y:auto;
-      min-height:0;
-      flex:1;
-      padding-right:4px;
-    }
-
-    .history-item{
-      border:1px solid #313131;
-      background:#202020;
-      color:#ddd;
-      padding:10px 12px;
-      border-radius:10px;
-      font-size:13px;
-      line-height:1.4;
-      cursor:pointer;
-      transition:0.2s ease;
-      text-align:left;
-      width:100%;
-    }
-
-    .history-item:hover{
-      background:#292929;
-      border-color:#414141;
-    }
-
-    .sidebar-note{
-      font-size:12px;
-      line-height:1.6;
-      color:#8f8f8f;
-      border-top:1px solid #2a2a2a;
-      padding-top:14px;
-      margin-top:10px;
-    }
-
-    /* MAIN */
-    .main{
-      flex:1;
-      display:flex;
-      flex-direction:column;
-      min-width:0;
-      height:100vh;
-    }
-
-    .topbar{
-      height:62px;
-      border-bottom:1px solid #2d2d2d;
-      display:flex;
-      align-items:center;
-      justify-content:space-between;
-      padding:0 18px;
-      flex-shrink:0;
-      background:var(--topbar);
-      gap:10px;
-    }
-
-    .top-left{
-      display:flex;
-      align-items:center;
-      gap:10px;
-      min-width:0;
-    }
-
-    .mobile-menu{
-      display:none;
-      width:40px;
-      height:40px;
-      border:none;
-      border-radius:10px;
-      background:#2f2f2f;
-      border:1px solid #3a3a3a;
-      color:#fff;
-      cursor:pointer;
-      align-items:center;
-      justify-content:center;
-      flex-shrink:0;
-    }
-
-    .mobile-menu svg{
-      width:18px;
-      height:18px;
-    }
-
-    .top-title{
-      font-size:16px;
-      font-weight:600;
-      color:#fff;
-      white-space:nowrap;
-      overflow:hidden;
-      text-overflow:ellipsis;
-    }
-
-    .top-actions{
-      display:flex;
-      align-items:center;
-      gap:10px;
-      flex-shrink:0;
-    }
-
-    .api-btn, .clear-btn{
-      border:none;
-      background:#2f2f2f;
-      color:#fff;
-      border:1px solid #3d3d3d;
-      padding:10px 14px;
-      border-radius:10px;
-      cursor:pointer;
-      font-size:13px;
-      transition:0.2s ease;
-    }
-
-    .api-btn:hover, .clear-btn:hover{
-      background:#393939;
-    }
-
-    /* CHAT */
-    .chat-wrap{
-      flex:1;
-      min-height:0;
-      overflow-y:auto;
-      padding:24px 0 40px;
-      scroll-behavior:smooth;
-    }
-
-    .chat-inner{
-      width:min(920px, calc(100% - 28px));
-      margin:0 auto;
-      display:flex;
-      flex-direction:column;
-      gap:18px;
-    }
-
-    .welcome{
-      margin-top:48px;
-      text-align:center;
-      color:#fff;
-      padding:0 8px;
-    }
-
-    .welcome h1{
-      font-size:36px;
-      font-weight:700;
-      margin-bottom:10px;
-      line-height:1.2;
-    }
-
-    .welcome p{
-      font-size:15px;
-      color:#b7b7b7;
-      line-height:1.6;
-      max-width:720px;
-      margin:0 auto;
-    }
-
-    .message{
-      width:100%;
-      border-radius:18px;
-      border:1px solid var(--border);
-      overflow:hidden;
-      animation:fadeIn 0.25s ease;
-    }
-
-    .message.user{
-      background:var(--user);
-    }
-
-    .message.assistant{
-      background:var(--assistant);
-    }
-
-    .message-head{
-      padding:12px 16px;
-      border-bottom:1px solid rgba(255,255,255,0.06);
-      font-size:13px;
-      font-weight:600;
-      display:flex;
-      align-items:center;
-      justify-content:space-between;
-      gap:8px;
-    }
-
-    .message-head-left{
-      display:flex;
-      align-items:center;
-      gap:8px;
-    }
-
-    .message-tag{
-      display:inline-flex;
-      align-items:center;
-      justify-content:center;
-      min-width:24px;
-      height:24px;
-      padding:0 8px;
-      border-radius:999px;
-      font-size:11px;
-      font-weight:700;
-      border:1px solid rgba(255,255,255,0.08);
-      background:rgba(255,255,255,0.04);
-      color:#dcdcdc;
-    }
-
-    .message-body{
-      padding:16px;
-      font-size:14px;
-      line-height:1.75;
-      white-space:pre-wrap;
-      word-break:break-word;
-    }
-
-    .message-body p{
-      margin-bottom:12px;
-    }
-
-    .assistant-text{
-      white-space:pre-wrap;
-      word-break:break-word;
-      line-height:1.8;
-    }
-
-    .assistant-text strong{
-      color:#fff;
-    }
-
-    .code-block{
-      background:var(--code);
-      border:1px solid var(--code-border);
-      border-radius:14px;
-      overflow:hidden;
-      margin-top:12px;
-    }
-
-    .code-head{
-      display:flex;
-      align-items:center;
-      justify-content:space-between;
-      padding:10px 14px;
-      border-bottom:1px solid #333;
-      font-size:12px;
-      color:#bdbdbd;
-      background:#252525;
-      gap:8px;
-      flex-wrap:wrap;
-    }
-
-    .code-actions{
-      display:flex;
-      align-items:center;
-      gap:8px;
-      flex-wrap:wrap;
-    }
-
-    .copy-btn, .download-btn{
-      border:none;
-      background:#343434;
-      color:#fff;
-      padding:6px 10px;
-      border-radius:8px;
-      font-size:12px;
-      cursor:pointer;
-      transition:0.2s ease;
-    }
-
-    .copy-btn:hover, .download-btn:hover{
-      background:#404040;
-    }
-
-    pre{
-      margin:0;
-      padding:16px;
-      overflow:auto;
-      font-size:13px;
-      line-height:1.65;
-      color:#f5f5f5;
-      font-family:Consolas, "Courier New", monospace;
-      white-space:pre;
-    }
-
-    .typing{
-      display:inline-flex;
-      gap:6px;
-      align-items:center;
-      padding:4px 0;
-    }
-
-    .typing span{
-      width:8px;
-      height:8px;
-      border-radius:50%;
-      background:#bcbcbc;
-      display:block;
-      animation:bounce 1s infinite ease-in-out;
-    }
-
-    .typing span:nth-child(2){ animation-delay:0.15s; }
-    .typing span:nth-child(3){ animation-delay:0.3s; }
-
-    /* INPUT */
-    .input-area{
-      flex-shrink:0;
-      padding:16px;
-      border-top:1px solid #2e2e2e;
-      background:#212121;
-    }
-
-    .input-inner{
-      width:min(920px, 100%);
-      margin:0 auto;
-    }
-
-    .input-box{
-      background:var(--input);
-      border:1px solid #3a3a3a;
-      border-radius:24px;
-      padding:12px 12px 12px 16px;
-      display:flex;
-      align-items:flex-end;
-      gap:10px;
-      transition:0.2s ease;
-    }
-
-    .input-box:focus-within{
-      border-color:#4b4b4b;
-      box-shadow:0 0 0 1px rgba(255,255,255,0.04);
-    }
-
-    .prompt{
-      flex:1;
-      min-height:24px;
-      max-height:180px;
-      resize:none;
-      border:none;
-      outline:none;
-      background:transparent;
-      color:#fff;
-      font-size:15px;
-      line-height:1.6;
-      font-family:inherit;
-      overflow-y:auto;
-    }
-
-    .prompt::placeholder{
-      color:#9d9d9d;
-    }
-
-    .send-btn{
-      width:42px;
-      height:42px;
-      border:none;
-      border-radius:50%;
-      background:#fff;
-      color:#111;
-      cursor:pointer;
-      display:flex;
-      align-items:center;
-      justify-content:center;
-      flex-shrink:0;
-      transition:0.2s ease;
-    }
-
-    .send-btn:hover{
-      transform:scale(1.03);
-    }
-
-    .send-btn:disabled{
-      opacity:0.5;
-      cursor:not-allowed;
-      transform:none;
-    }
-
-    .send-btn svg{
-      width:18px;
-      height:18px;
-    }
-
-    .footer-note{
-      font-size:12px;
-      color:#8f8f8f;
-      text-align:center;
-      margin-top:10px;
-      line-height:1.5;
-      padding:0 8px;
-    }
-
-    /* MODAL */
-    .modal{
-      position:fixed;
-      inset:0;
-      background:rgba(0,0,0,0.65);
-      display:none;
-      align-items:center;
-      justify-content:center;
-      z-index:999;
-      padding:16px;
-    }
-
-    .modal.show{
-      display:flex;
-    }
-
-    .modal-card{
-      width:min(520px, 100%);
-      background:#1f1f1f;
-      border:1px solid #3a3a3a;
-      border-radius:18px;
-      padding:20px;
-    }
-
-    .modal-card h3{
-      font-size:20px;
-      margin-bottom:10px;
-    }
-
-    .modal-card p{
-      font-size:14px;
-      color:#b9b9b9;
-      line-height:1.6;
-      margin-bottom:14px;
-    }
-
-    .api-input{
-      width:100%;
-      padding:14px;
-      border-radius:12px;
-      border:1px solid #444;
-      background:#2b2b2b;
-      color:#fff;
-      outline:none;
-      font-size:14px;
-      margin-bottom:14px;
-    }
-
-    .modal-actions{
-      display:flex;
-      gap:10px;
-      justify-content:flex-end;
-      flex-wrap:wrap;
-    }
-
-    .btn{
-      border:none;
-      padding:10px 16px;
-      border-radius:10px;
-      cursor:pointer;
-      font-size:14px;
-    }
-
-    .btn-secondary{
-      background:#333;
-      color:#fff;
-    }
-
-    .btn-primary{
-      background:#fff;
-      color:#111;
-    }
-
-    /* MOBILE SIDEBAR */
-    .mobile-overlay{
-      position:fixed;
-      inset:0;
-      background:rgba(0,0,0,0.5);
-      z-index:998;
-      display:none;
-    }
-
-    .mobile-overlay.show{
-      display:block;
-    }
-
-    @media (max-width: 900px){
-      .sidebar{
-        position:fixed;
-        left:-290px;
-        top:0;
-        height:100vh;
-        z-index:999;
-        transition:0.25s ease;
-        width:270px;
-      }
-
-      .sidebar.show{
-        left:0;
-      }
-
-      .mobile-menu{
-        display:flex;
-      }
-
-      .top-title{
-        font-size:15px;
-      }
-
-      .top-actions{
-        gap:8px;
-      }
-
-      .clear-btn{
-        display:none;
-      }
-
-      .welcome h1{
-        font-size:28px;
-      }
-
-      .chat-inner,
-      .input-inner{
-        width:calc(100% - 10px);
-      }
-    }
-
-    @media (max-width: 520px){
-      .topbar{
-        padding:0 10px;
-      }
-
-      .api-btn{
-        padding:9px 10px;
-        font-size:12px;
-      }
-
-      .input-area{
-        padding:10px;
-      }
-
-      .message-head{
-        padding:10px 12px;
-      }
-
-      .message-body{
-        padding:12px;
-      }
-
-      pre{
-        padding:12px;
-        font-size:12px;
-      }
-
-      .welcome{
-        margin-top:28px;
-      }
-
-      .welcome h1{
-        font-size:24px;
-      }
-
-      .welcome p{
-        font-size:14px;
-      }
-    }
-
-    @keyframes fadeIn{
-      from{ opacity:0; transform:translateY(8px); }
-      to{ opacity:1; transform:translateY(0); }
-    }
-
-    @keyframes bounce{
-      0%,80%,100%{ transform:scale(0.7); opacity:0.6; }
-      40%{ transform:scale(1); opacity:1; }
-    }
-  </style>
-</head>
-<body>
-  <div class="mobile-overlay" id="mobileOverlay"></div>
-
-  <div class="app">
-    <aside class="sidebar" id="sidebar">
-      <div class="brand">Smart AI Assistant</div>
-      <div class="brand-sub">Human-like Groq chat with memory</div>
-
-      <button class="new-chat-btn" id="newChatBtn">+ New Chat</button>
-
-      <div class="history-title">Recent Messages</div>
-      <div class="history-list" id="historyList"></div>
-
-      <div class="sidebar-note">
-        Remembers previous messages in current chat.<br />
-        Better follow-up understanding.<br />
-        Can explain + generate code + refine code.
-      </div>
-    </aside>
-
-    <main class="main">
-      <div class="topbar">
-        <div class="top-left">
-          <button class="mobile-menu" id="mobileMenuBtn" title="Menu">
-            <svg viewBox="0 0 24 24" fill="none">
-              <path d="M4 7h16M4 12h16M4 17h16" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
-            </svg>
-          </button>
-          <div class="top-title">Smart AI Assistant (Groq)</div>
-        </div>
-
-        <div class="top-actions">
-          <button class="clear-btn" id="clearMemoryBtn">Clear Memory</button>
-          <button class="api-btn" id="openApiModal">Set Groq API Key</button>
-        </div>
-      </div>
-
-      <div class="chat-wrap" id="chatWrap">
-        <div class="chat-inner" id="chatInner">
-          <div class="welcome" id="welcomeBlock">
-            <h1>What can I help you with today?</h1>
-            <p>
-              I can chat more naturally, remember your previous messages in this conversation,
-              explain things like a human, and generate/refine code across follow-ups.
-              Try: “Build a login page”, then “make it dark theme”, then “convert to React”.
-            </p>
-          </div>
-        </div>
-      </div>
-
-      <div class="input-area">
-        <div class="input-inner">
-          <div class="input-box">
-            <textarea
-              id="promptInput"
-              class="prompt"
-              rows="1"
-              placeholder="Ask anything... code, explanations, improvements, follow-ups, debugging, design ideas..."
-            ></textarea>
-            <button class="send-btn" id="sendBtn" title="Send">
-              <svg viewBox="0 0 24 24" fill="none">
-                <path d="M12 5L19 12L12 19" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/>
-                <path d="M5 12H19" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/>
-              </svg>
-            </button>
-          </div>
-          <div class="footer-note">
-            Frontend-only demo using Groq API. Current chat memory is preserved in browser for follow-up replies.
-          </div>
-        </div>
-      </div>
-    </main>
-  </div>
-
-  <!-- API MODAL -->
-  <div class="modal" id="apiModal">
-    <div class="modal-card">
-      <h3>Set Groq API Key</h3>
-      <p>
-        This frontend-only version stores your Groq API key in localStorage on your device.
-        Good for demo/testing. Not recommended for public production.
-      </p>
-      <input
-        type="password"
-        id="apiKeyInput"
-        class="api-input"
-        placeholder="Paste your Groq API key here (gsk_...)"
-      />
-      <div class="modal-actions">
-        <button class="btn btn-secondary" id="closeModalBtn">Cancel</button>
-        <button class="btn btn-primary" id="saveApiBtn">Save</button>
-      </div>
-    </div>
-  </div>
-
-  <script>
-const GROQ_URL = "https://api.groq.com/openai/v1/chat/completions";
-const API_KEY_STORAGE = "groq_api_key";
-const CHAT_STORAGE = "multi_chat_v1";
-
-let chats = JSON.parse(localStorage.getItem(CHAT_STORAGE) || "[]");
-let currentChatId = null;
-let isGenerating = false;
-
-const chatInner = document.getElementById("chatInner");
-const promptInput = document.getElementById("promptInput");
-const sendBtn = document.getElementById("sendBtn");
-const historyList = document.getElementById("historyList");
-const newChatBtn = document.getElementById("newChatBtn");
-
-function saveChats() {
-  localStorage.setItem(CHAT_STORAGE, JSON.stringify(chats));
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Smart AI Assistant PRO</title>
+
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+
+body{
+  font-family:Segoe UI,Arial;
+  background:#212121;
+  color:#fff;
+  height:100vh;
+  display:flex;
 }
 
-function createNewChat() {
-  const id = Date.now();
-  const chat = {
-    id,
-    title: "New Chat",
-    messages: []
-  };
-  chats.unshift(chat);
-  currentChatId = id;
-  saveChats();
+/* SIDEBAR */
+.sidebar{
+  width:260px;
+  background:#171717;
+  border-right:1px solid #2a2a2a;
+  display:flex;
+  flex-direction:column;
+  padding:12px;
+}
+
+.brand{
+  font-size:18px;
+  font-weight:700;
+  margin-bottom:10px;
+}
+
+.new-chat{
+  background:#2b2b2b;
+  border:1px solid #444;
+  padding:10px;
+  border-radius:10px;
+  cursor:pointer;
+  margin-bottom:10px;
+}
+
+.chat-list{
+  flex:1;
+  overflow:auto;
+}
+
+.chat-item{
+  padding:10px;
+  border-radius:8px;
+  background:#222;
+  margin-bottom:6px;
+  cursor:pointer;
+}
+
+.chat-item:hover{
+  background:#333;
+}
+
+/* MAIN */
+.main{
+  flex:1;
+  display:flex;
+  flex-direction:column;
+}
+
+.topbar{
+  height:60px;
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  padding:0 15px;
+  border-bottom:1px solid #333;
+}
+
+.chat{
+  flex:1;
+  overflow:auto;
+  padding:20px;
+}
+
+.message{
+  margin-bottom:15px;
+  padding:12px;
+  border-radius:10px;
+}
+
+.user{background:#343541}
+.assistant{background:#2b2b2b}
+
+pre{
+  background:#111;
+  padding:10px;
+  border-radius:8px;
+  margin-top:10px;
+  overflow:auto;
+}
+
+.input-box{
+  display:flex;
+  padding:10px;
+  border-top:1px solid #333;
+}
+
+textarea{
+  flex:1;
+  background:#2b2b2b;
+  border:none;
+  color:#fff;
+  padding:10px;
+  border-radius:10px;
+}
+
+button{
+  margin-left:10px;
+  padding:10px 15px;
+  border:none;
+  background:#fff;
+  color:#000;
+  border-radius:8px;
+  cursor:pointer;
+}
+</style>
+</head>
+
+<body>
+
+<div class="sidebar">
+  <div class="brand">Smart AI</div>
+  <button class="new-chat" onclick="newChat()">+ New Chat</button>
+  <div class="chat-list" id="chatList"></div>
+</div>
+
+<div class="main">
+  <div class="topbar">
+    <div>AI Assistant</div>
+    <button onclick="setAPI()">Set API</button>
+  </div>
+
+  <div class="chat" id="chatBox"></div>
+
+  <div class="input-box">
+    <textarea id="input" placeholder="Ask anything..."></textarea>
+    <button onclick="send()">Send</button>
+  </div>
+</div>
+
+<script>
+const API_URL="https://api.groq.com/openai/v1/chat/completions";
+let chats=JSON.parse(localStorage.getItem("chats")||"[]");
+let current=null;
+
+function save(){localStorage.setItem("chats",JSON.stringify(chats))}
+
+function newChat(){
+  const id=Date.now();
+  chats.unshift({id,title:"New Chat",messages:[]});
+  current=id;
+  save();
   renderChats();
   renderMessages();
 }
 
-function getCurrentChat() {
-  return chats.find(c => c.id === currentChatId);
-}
-
-function renderChats() {
-  historyList.innerHTML = "";
-
-  chats.forEach(chat => {
-    const btn = document.createElement("button");
-    btn.className = "history-item";
-    btn.textContent = chat.title;
-
-    btn.onclick = () => {
-      currentChatId = chat.id;
-      renderMessages();
-    };
-
-    historyList.appendChild(btn);
+function renderChats(){
+  const list=document.getElementById("chatList");
+  list.innerHTML="";
+  chats.forEach(c=>{
+    const d=document.createElement("div");
+    d.className="chat-item";
+    d.innerText=c.title;
+    d.onclick=()=>{current=c.id;renderMessages()};
+    list.appendChild(d);
   });
 }
 
-function renderMessages() {
-  const chat = getCurrentChat();
-  chatInner.innerHTML = "";
+function getChat(){
+  return chats.find(c=>c.id===current);
+}
 
-  if (!chat || !chat.messages.length) {
-    chatInner.innerHTML = `
-      <div class="welcome">
-        <h1>What can I help you with today?</h1>
-        <p>Try: build login page → make dark → convert to React</p>
-      </div>
-    `;
-    return;
-  }
+function renderMessages(){
+  const box=document.getElementById("chatBox");
+  box.innerHTML="";
+  const chat=getChat();
+  if(!chat)return;
 
-  chat.messages.forEach(msg => {
-    addMessageUI(msg.role, msg.content);
+  chat.messages.forEach(m=>{
+    const div=document.createElement("div");
+    div.className="message "+m.role;
+
+    if(m.role==="assistant"){
+      renderCode(div,m.content);
+    }else{
+      div.innerText=m.content;
+    }
+
+    box.appendChild(div);
   });
+
+  box.scrollTop=box.scrollHeight;
 }
 
-function addMessageUI(role, content) {
-  const div = document.createElement("div");
-  div.className = `message ${role}`;
-
-  const body = document.createElement("div");
-  body.className = "message-body";
-
-  if (role === "assistant") {
-    renderAssistant(body, content);
-  } else {
-    body.textContent = content;
-  }
-
-  div.appendChild(body);
-  chatInner.appendChild(div);
-  chatInner.scrollTop = chatInner.scrollHeight;
-}
-
-function renderAssistant(container, text) {
-  const parts = text.split("```");
-
-  parts.forEach((part, i) => {
-    if (i % 2 === 1) {
-      const pre = document.createElement("pre");
-      pre.textContent = part.replace(/^[a-z]+\n/, "");
-      container.appendChild(pre);
-    } else {
-      const p = document.createElement("div");
-      p.textContent = part;
-      container.appendChild(p);
+function renderCode(div,text){
+  const parts=text.split("```");
+  parts.forEach((p,i)=>{
+    if(i%2){
+      const pre=document.createElement("pre");
+      pre.innerText=p.replace(/^[a-z]+\n/,"");
+      div.appendChild(pre);
+    }else{
+      div.append(p);
     }
   });
 }
 
-function setChatTitle(chat, firstMessage) {
-  if (chat.title === "New Chat") {
-    chat.title = firstMessage.slice(0, 30);
-  }
+function setAPI(){
+  const key=prompt("Enter Groq API Key:");
+  localStorage.setItem("api",key);
 }
 
-async function generateReply(prompt) {
-  const apiKey = localStorage.getItem(API_KEY_STORAGE);
-  if (!apiKey) throw new Error("No API key");
+async function send(){
+  const input=document.getElementById("input");
+  const msg=input.value.trim();
+  if(!msg)return;
 
-  const chat = getCurrentChat();
+  const chat=getChat();
 
-  const systemPrompt = `
-You are a smart, human-like AI assistant.
-- Be natural and conversational
-- Understand context deeply
-- Handle follow-up edits
-- Give clean code when needed
-- Avoid robotic responses
-`;
+  chat.messages.push({role:"user",content:msg});
+  if(chat.title==="New Chat")chat.title=msg.slice(0,25);
 
-  const messages = [
-    { role: "system", content: systemPrompt },
-    ...chat.messages,
-    { role: "user", content: prompt }
-  ];
-
-  const res = await fetch(GROQ_URL, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      Authorization: "Bearer " + apiKey
-    },
-    body: JSON.stringify({
-      model: "llama-3.3-70b-versatile",
-      messages,
-      temperature: 0.6
-    })
-  });
-
-  const data = await res.json();
-  return data.choices[0].message.content;
-}
-
-async function sendMessage() {
-  const prompt = promptInput.value.trim();
-  if (!prompt || isGenerating) return;
-
-  const chat = getCurrentChat();
-  isGenerating = true;
-  sendBtn.disabled = true;
-
-  addMessageUI("user", prompt);
-  chat.messages.push({ role: "user", content: prompt });
-
-  setChatTitle(chat, prompt);
-  saveChats();
+  input.value="";
   renderChats();
+  renderMessages();
 
-  promptInput.value = "";
+  const loading={role:"assistant",content:"Thinking..."};
+  chat.messages.push(loading);
+  renderMessages();
 
-  const loading = addLoading();
+  try{
+    const res=await fetch(API_URL,{
+      method:"POST",
+      headers:{
+        "Content-Type":"application/json",
+        "Authorization":"Bearer "+localStorage.getItem("api")
+      },
+      body:JSON.stringify({
+        model:"llama-3.3-70b-versatile",
+        messages:[
+          {role:"system",content:"You are a smart human-like AI assistant. Be natural and helpful."},
+          ...chat.messages.filter(m=>m!==loading)
+        ]
+      })
+    });
 
-  try {
-    const reply = await generateReply(prompt);
+    const data=await res.json();
+    loading.content=data.choices[0].message.content;
 
-    loading.remove();
-    addMessageUI("assistant", reply);
-
-    chat.messages.push({ role: "assistant", content: reply });
-    saveChats();
-
-  } catch (e) {
-    loading.remove();
-    addMessageUI("assistant", "Error: " + e.message);
+  }catch(e){
+    loading.content="Error: "+e.message;
   }
 
-  isGenerating = false;
-  sendBtn.disabled = false;
+  save();
+  renderMessages();
 }
 
-function addLoading() {
-  const div = document.createElement("div");
-  div.className = "message assistant";
-  div.textContent = "Thinking...";
-  chatInner.appendChild(div);
-  return div;
-}
-
-sendBtn.onclick = sendMessage;
-
-promptInput.addEventListener("keydown", (e) => {
-  if (e.key === "Enter" && !e.shiftKey) {
-    e.preventDefault();
-    sendMessage();
-  }
-});
-
-newChatBtn.onclick = createNewChat;
-
-/* INIT */
-if (!chats.length) createNewChat();
-else currentChatId = chats[0].id;
+if(!chats.length)newChat();
+else current=chats[0].id;
 
 renderChats();
 renderMessages();
 </script>
+
 </body>
 </html>
